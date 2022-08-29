@@ -1,0 +1,73 @@
+<mujoco model="ur5_arm">
+    <compiler angle="radian" />
+    <!-- <size njmax="500" nconmax="100" /> -->
+    <actuator>
+        <!-- Mujoco does not have velocity limit in actuator :( -->
+    <!--     <position ctrllimited="true" ctrlrange="-3.0503 3.0503" joint="right_j0" kp="50" name="pos_right_j0"/>
+        <position ctrllimited="true" ctrlrange="-3.8095 2.2736" joint="right_j1" kp="30" name="pos_right_j1" forcelimited="true" forcerange="-8000 8000"/>
+        <position ctrllimited="true" ctrlrange="-3.0426 3.0426" joint="right_j2" kp="20" name="pos_right_j2" forcelimited="true" forcerange="-500 500"/>
+        <position ctrllimited="true" ctrlrange="-3.0439 3.0439" joint="right_j3" kp="15" name="pos_right_j3" forcelimited="true" forcerange="-500 500"/>
+        <position ctrllimited="true" ctrlrange="-2.9761 2.9761" joint="right_j4" kp="10" name="pos_right_j4" forcelimited="true" forcerange="-8 8"/>
+        <position ctrllimited="true" ctrlrange="-2.9761 2.9761" joint="right_j5" kp="5" name="pos_right_j5" forcelimited="true" forcerange="-8 8"/>
+        <position ctrllimited="true" ctrlrange="-4.7124 4.7124" joint="right_j6" kp="2" name="pos_right_j6" forcelimited="true" forcerange="-8 8"/> -->
+        <velocity ctrllimited="true" ctrlrange="-3.14159265359 3.14159265359" kv="8.0" joint="shoulder_pan_joint" name="vel_shoulder_pan_joint"/>
+        <velocity ctrllimited="true" ctrlrange="-3.14159265359 3.14159265359" kv="7.0" joint="shoulder_lift_joint"  name="vel_shoulder_lift_joint"/>
+        <velocity ctrllimited="true" ctrlrange="-3.14159265359 3.14159265359" kv="6.0" joint="elbow_joint" name="vel_elbow_joint"/>
+        <velocity ctrllimited="true" ctrlrange="-3.14159265359 3.14159265359" kv="4.0" joint="wrist_1_joint" name="vel_wrist_1_joint"/>
+        <velocity ctrllimited="true" ctrlrange="-3.14159265359 3.14159265359" kv="2.0" joint="wrist_2_joint" name="vel_wrist_2_joint"/>
+        <velocity ctrllimited="true" ctrlrange="-3.14159265359 3.14159265359" kv="1.0" joint="wrist_3_joint"  name="vel_wrist_3_joint"/>
+    </actuator>
+    <asset>
+        <mesh name="base" file="meshes/base.stl" />
+        <mesh name="shoulder" file="meshes/shoulder.stl" />
+        <mesh name="upperarm" file="meshes/upperarm.stl" />
+        <mesh name="forearm" file="meshes/forearm.stl" />
+        <mesh name="wrist1" file="meshes/wrist1.stl" />
+        <mesh name="wrist2" file="meshes/wrist2.stl" />
+        <mesh name="wrist3" file="meshes/wrist3.stl" />
+    </asset>
+   
+   <default>
+        <joint damping="0.1" armature=".01"/>
+   </default>
+
+    <worldbody>
+        <body name="base" pos="0 0 0">
+            <geom name="base_geom" type="mesh" rgba="0.7 0.7 0.7 1" mesh="base" />
+            <body name="shoulder_link" pos="0 0 0.089159">
+                <inertial pos="0 0 0" mass="3.7" diaginertia="0.0102675 0.0102675 0.00666" />
+                <joint name="shoulder_pan_joint" pos="0 0 0" axis="0 0 1" limited="true" range="-6.28319 6.28319" />
+                <geom name="shoulder_geom" type="mesh" rgba="0.7 0.7 0.7 1" mesh="shoulder" />
+                <body name="upper_arm_link" pos="0 0.13585 0" quat="0.707107 0 0.707107 0">
+                    <inertial pos="0 0 0.28" mass="8.393" diaginertia="0.226891 0.226891 0.0151074" />
+                    <joint name="shoulder_lift_joint" pos="0 0 0" axis="0 1 0" limited="true" range="-6.28319 6.28319" />
+                    <geom name="upperarm_geom" type="mesh"  mesh="upperarm" />
+                    <body name="forearm_link" pos="0 -0.1197 0.425">
+                        <inertial pos="0 0 0.196125" mass="2.275" diaginertia="0.0312168 0.0312168 0.004095" />
+                        <joint name="elbow_joint" pos="0 0 0" axis="0 1 0" limited="true" range="-3.14159 3.14159" />
+                        <geom name="forearm_geom" type="mesh" rgba="0.7 0.7 0.7 1" mesh="forearm" />
+                        <body name="wrist_1_link" pos="0 0 0.39225" quat="0.707107 0 0.707107 0">
+                            <inertial pos="0 0.093 0" mass="1.219" diaginertia="0.0025599 0.0025599 0.0021942" />
+                            <joint name="wrist_1_joint" pos="0 0 0" axis="0 1 0" limited="true" range="-6.28319 6.28319" />
+                            <geom name="wrist1_geom" type="mesh" rgba="0.7 0.7 0.7 1" mesh="wrist1" />
+                            <body name="wrist_2_link" pos="0 0.093 0">
+                                <inertial pos="0 0 0.09465" mass="1.219" diaginertia="0.0025599 0.0025599 0.0021942" />
+                                <joint name="wrist_2_joint" pos="0 0 0" axis="0 0 1" limited="true" range="-6.28319 6.28319" />
+                                <geom name="wrist2_geom" type="mesh" rgba="0.7 0.7 0.7 1" mesh="wrist2" />
+                                <body name="wrist_3_link" pos="0 0 0.09465">
+                                    <inertial pos="0 0.0650884 0" quat="0.707107 0 0 0.707107" mass="0.1889" diaginertia="0.000132134 8.47648e-05 8.47648e-05" />
+                                    <joint name="wrist_3_joint" pos="0 0 0" axis="0 1 0" limited="true" range="-6.28319 6.28319" />
+                                    <geom name="wrist3_geom" type="mesh" mesh="wrist3" />
+                                    <!-- <geom size="0.005 0.005 0.005" pos="0 0.0723 0" quat="0.707107 0 0 0.707107" type="box" /> -->
+                                    <body name="right_hand" pos="0 0.0645 0.0" quat="0.5 -0.5 0.5 0.5">
+                                        <!-- To add gripper -->
+                                    </body>
+                                </body>
+                            </body>
+                        </body>
+                    </body>
+                </body>
+            </body>
+        </body>
+    </worldbody>
+</mujoco>

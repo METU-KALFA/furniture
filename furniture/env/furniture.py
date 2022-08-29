@@ -75,7 +75,6 @@ class FurnitureEnv(metaclass=EnvMeta):
             self._render_mode = "human"
         else:
             self._render_mode = "no"  # ['no', 'human', 'rgb_array']
-
         self._screen_width = config.screen_width
         self._screen_height = config.screen_height
 
@@ -116,6 +115,9 @@ class FurnitureEnv(metaclass=EnvMeta):
         self.init_quat = None
         self.fixed_parts = []
 
+        self.sim_eef_pos_data = []
+        self.target_eef_pos_data= []
+        
         self._manual_resize = None
         self._action_on = False
         self._init_qpos = None
@@ -323,6 +325,7 @@ class FurnitureEnv(metaclass=EnvMeta):
         """
         if self._record_demo:
             self._demo.reset()
+
         self._reset(furniture_id=furniture_id, background=background)
         self._after_reset()
 
@@ -612,7 +615,10 @@ class FurnitureEnv(metaclass=EnvMeta):
             # img = img[:, ::-1, :, :] / 255.0
             img = img[:, ::-1, :, :]
             return img
-
+        ### Task3 TODO: Add a mode for pointcloud rendering.
+        ### In this mode, a pointcloud object or a list of point clouds for each part should be returned. 
+        ### This mode is going to be similar to rgbd_array mode since for point clouds we need the depth and rgb array.
+        ### Look into open3d library for creating pointcloud from depth and rgb images. http://www.open3d.org/docs/release/
         elif mode == "rgbd_array":
             depth = None
             if self._unity:
@@ -1809,6 +1815,13 @@ class FurnitureEnv(metaclass=EnvMeta):
         state = self.get_env_state()
         self._demo.add(state=state)
 
+    def _change_camera_pose(self, new_poses, camera_ids):
+         ### Task3 TODO: Implement the function 
+         ### Given the new poses of the cameras (a list of tuples each containing 7 elements (3 pos, 4 ori))
+         ### and camera ids (which cameras to change the pose)
+         ### New parameters can be added to the function
+         pass 
+        
     def _reset_internal(self):
         """
         Resets simulation internal configurations.
@@ -1864,7 +1877,7 @@ class FurnitureEnv(metaclass=EnvMeta):
             and self._agent_type != "Cursor"
         ):
             from .models import assets_root
-
+            ## Task1 TODO Add ik controller for Ur5 here (this will be done later)
             if self._agent_type == "Sawyer":
                 from .controllers import SawyerIKController as IKController
             elif self._agent_type == "Baxter":
@@ -1875,6 +1888,8 @@ class FurnitureEnv(metaclass=EnvMeta):
                 from .controllers import JacoIKController as IKController
             elif self._agent_type == "Fetch":
                 from .controllers import FetchIKController as IKController
+            elif self._agent_type == "Ur5":
+                from .controllers import Ur5IKController as IKController
             else:
                 raise ValueError
 
@@ -1952,6 +1967,19 @@ class FurnitureEnv(metaclass=EnvMeta):
             self.mujoco_robot = Cursor()
             self.mujoco_robot.set_size(self._move_speed / 2)
             self.mujoco_robot.set_xpos([0, 0, self._move_speed / 2])
+
+        ### Task1 TODO: Write code for loading the UR5 robot.
+        elif self._agent_type =="Ur5":
+            from .models.robots import Ur5
+
+            self.mujoco_robot = Ur5(use_torque=use_torque)
+            self.gripper = {"right": gripper_factory("Robotiq140Gripper")}
+            self.gripper["right"].hide_visualization()
+            self.mujoco_robot.add_gripper("right_hand", self.gripper["right"])
+            self.mujoco_robot.set_base_xpos([0, 0.65, -0.7])
+            self.mujoco_robot.set_base_xquat([1, 0, 0, -1])
+            pass
+
 
         # hide an agent
         if not self._config.render_agent:
@@ -2518,7 +2546,8 @@ class FurnitureEnv(metaclass=EnvMeta):
                             ]
                         )
                 elif self._control_type in ["ik", "position_orientation"]:
-                    if self._agent_type in ["Sawyer", "Panda", "Jaco", "Fetch"]:
+                    ## Task1 TODO: Add Ur5 here (adding the name to the list is probably enough)
+                    if self._agent_type in ["Sawyer", "Panda", "Jaco", "Fetch","Ur5"]:
                         action = action[:8]
                         action[6] = flag[0]
                     elif self._agent_type == "Baxter":
@@ -2577,6 +2606,7 @@ class FurnitureEnv(metaclass=EnvMeta):
         finally:
             if self._record_vid:
                 self.vid_rec.close()
+            #self.plot_data()
 
     def run_demo_actions(self, config=None):
         """
@@ -2909,7 +2939,8 @@ class FurnitureEnv(metaclass=EnvMeta):
         connect = action[-1]
 
         if self._control_type == "ik":
-            if self._agent_type in ["Sawyer", "Panda", "Jaco", "Fetch"]:
+            ## Task1 TODO: Add Ur5 here (adding the name to the list is probably enough)
+            if self._agent_type in ["Sawyer", "Panda", "Jaco", "Fetch", "Ur5"]:
                 action[:3] = action[:3] * self._move_speed
                 action[:3] = [-action[1], action[0], action[2]]
                 gripper_pos = self.sim.data.get_body_xpos("right_hand")
@@ -2961,7 +2992,8 @@ class FurnitureEnv(metaclass=EnvMeta):
             if self._agent_type in ["Sawyer", "Panda", "Fetch"]:
                 velocities = self._controller.get_control(**input_1)
                 low_action = np.concatenate([velocities, action[7:8]])
-            elif self._agent_type == "Jaco":
+            ## Task1 TODO: Add Ur5 here (probably same way as the Jaco)
+            elif self._agent_type in ["Jaco","Ur5"]:
                 velocities = self._controller.get_control(**input_1)
                 low_action = np.concatenate([velocities] + [action[7:]] * 3)
             elif self._agent_type == "Baxter":
@@ -2989,12 +3021,20 @@ class FurnitureEnv(metaclass=EnvMeta):
                     velocities = self._controller.get_control()
                     if self._agent_type in ["Sawyer", "Panda", "Fetch"]:
                         low_action = np.concatenate([velocities, action[7:]])
-                    elif self._agent_type == "Jaco":
+                    ## Task1 TODO: Add Ur5 here (probably same way as the Jaco)
+                    elif self._agent_type in ["Jaco","Ur5"]:
                         low_action = np.concatenate([velocities] + [action[7:]] * 3)
                     elif self._agent_type == "Baxter":
                         low_action = np.concatenate([velocities, action[14:]])
                     ctrl = self._setup_action(low_action)
 
+            # print("base frame target pos:",self._controller.ik_robot_target_pos)
+            # print("right hand pos:",self._right_hand_pos)
+            # errors = [self._controller.ik_robot_target_pos[i] - self._right_hand_pos[i] for i in range(len(self._controller.ik_robot_target_pos))]
+            # print("difference:", errors)
+            # print("error percentage",[errors[i]/self._controller.ik_robot_target_pos[i] for i in range(len(self._controller.ik_robot_target_pos))])
+            self.sim_eef_pos_data.append(self._right_hand_pos)
+            self.target_eef_pos_data.append(list(self._controller.ik_robot_target_pos))
         elif self._control_type == "ik_quaternion":
             arm_pos = {}
             arm_quat = {}
@@ -3028,7 +3068,8 @@ class FurnitureEnv(metaclass=EnvMeta):
             if self._agent_type in ["Sawyer", "Panda", "Fetch"]:
                 velocities = self._controller.get_control(**input_1)
                 low_action = np.concatenate([velocities, gripper_action])
-            elif self._agent_type == "Jaco":
+            ## Task1 TODO: Add Ur5 here (probably same way as the Jaco)
+            elif self._agent_type in ["Jaco","Ur5"]:
                 velocities = self._controller.get_control(**input_1)
                 low_action = np.concatenate([velocities] + [gripper_action] * 3)
             elif self._agent_type == "Baxter":
@@ -3056,7 +3097,8 @@ class FurnitureEnv(metaclass=EnvMeta):
                     velocities = self._controller.get_control()
                     if self._agent_type in ["Sawyer", "Panda", "Fetch"]:
                         low_action = np.concatenate([velocities, gripper_action])
-                    elif self._agent_type == "Jaco":
+                    ## Task1 TODO: Add Ur5 here (probably same way as the Jaco)
+                    elif self._agent_type in ["Jaco","Ur5"]:
                         low_action = np.concatenate([velocities] + [gripper_action] * 3)
                     elif self._agent_type == "Baxter":
                         low_action = np.concatenate([velocities, gripper_action])
@@ -3066,7 +3108,8 @@ class FurnitureEnv(metaclass=EnvMeta):
         """
         Take multiple physics simulation steps, bounded by self._control_timestep
         """
-        if self._agent_type in ["Sawyer", "Panda", "Jaco", "Fetch"]:
+        ## Task1 TODO: Add Ur5 here (adding the name to the list is probably enough)
+        if self._agent_type in ["Sawyer", "Panda", "Jaco", "Fetch","Ur5"]:
             action[:3] = action[:3] * self._move_speed
             action[:3] = [-action[1], action[0], action[2]]
         elif self._agent_type == "Baxter":
@@ -3108,7 +3151,8 @@ class FurnitureEnv(metaclass=EnvMeta):
         """
         Returns the cursor positions
         """
-        if self._agent_type in ["Sawyer", "Panda", "Jaco", "Baxter", "Fetch"]:
+        ## Task1 TODO: Add Ur5 here (adding the name to the list is probably enough)
+        if self._agent_type in ["Sawyer", "Panda", "Jaco", "Baxter", "Fetch","Ur5"]:
             return self.sim.data.site_xpos[self.eef_site_id["right"]].copy()
         elif self._agent_type == "Cursor":
             if name:
@@ -3334,7 +3378,8 @@ class FurnitureEnv(metaclass=EnvMeta):
             action = np.clip(action, -1, 1)
 
         arm_action = action[: self.mujoco_robot.dof]
-        if self._agent_type in ["Sawyer", "Panda", "Jaco", "Fetch"]:
+        ## Task1 TODO: Add Ur5 here (adding the name to the list is probably enough)
+        if self._agent_type in ["Sawyer", "Panda", "Jaco", "Fetch","Ur5"]:
             gripper_action_in = action[
                 self.mujoco_robot.dof : self.mujoco_robot.dof
                 + self.gripper["right"].dof
@@ -3455,3 +3500,71 @@ class FurnitureEnv(metaclass=EnvMeta):
         Returns eef orientation of left hand in base from of robot.
         """
         return T.mat2quat(self._left_hand_orn)
+
+    def plot_data(self):
+        """
+        Plots end effector's target pos calculated by ik_controller, and its current pos in environment.
+        """
+        import matplotlib.pyplot as plt
+
+        s = [i for i in range(len(self.target_eef_pos_data))]
+
+        x_target = [i[0] for i in self.target_eef_pos_data]
+        x_sim = [i[0] for i in self.sim_eef_pos_data]
+
+        y_target = [i[1] for i in self.target_eef_pos_data]
+        y_sim = [i[1] for i in self.sim_eef_pos_data]
+
+        z_target = [i[2] for i in self.target_eef_pos_data]
+        z_sim = [i[2] for i in self.sim_eef_pos_data]
+
+        x_err = [abs(x_target[i]-x_sim[i])*100/x_sim[i] for i in range(len(s))]
+        y_err = [abs(y_target[i]-y_sim[i])*100/x_sim[i] for i in range(len(s))]
+        z_err = [abs(z_target[i]-z_sim[i])*100/x_sim[i] for i in range(len(s))]
+
+
+        plt.figure(figsize=(18, 6))
+
+        plt.suptitle("Comparison: Target vs. Real End Effector Position")
+
+        plt.subplot(131)
+        plt.plot(s,x_target,label="Target Position")
+        plt.plot(s,x_sim,label="Current Coordinates")
+        plt.xlabel("Step")
+        plt.ylabel("Position")
+        plt.title("x coordinates")
+        plt.legend()
+
+
+        plt.subplot(132)
+        plt.plot(s,y_target,label="Target Position")
+        plt.plot(s,y_sim,label="Current Coordinates")
+        plt.xlabel("Step")
+        plt.ylabel("Position")
+        plt.title("y coordinates")
+        plt.legend()
+        
+
+        plt.subplot(133)
+        plt.plot(s,z_target,label="Target Position")
+        plt.plot(s,z_sim,label="Current Coordinates")
+        plt.xlabel("Step")
+        plt.ylabel("Position")
+        plt.title("z coordinates")
+        plt.legend()
+
+
+        plt.show()
+        plt.savefig(f'{self._agent_type}.png')
+
+        plt.figure(figsize=(6, 6))
+        plt.plot(s,x_err,label="x")
+        plt.plot(s,y_err,label="y")
+        plt.plot(s,z_err,label="z")
+        plt.xlabel("Step")
+        plt.ylabel("Error (%)")
+        plt.legend()
+        plt.title("Error Percentages")
+
+        plt.show()
+        plt.savefig(f'{self._agent_type}_error.png')

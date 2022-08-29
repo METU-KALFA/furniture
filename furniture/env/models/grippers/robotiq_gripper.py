@@ -34,6 +34,7 @@ class RobotiqGripperBase(Gripper):
     def dof(self):
         return 6
 
+    @property
     def contact_geoms(self):
         return [
             "robotiq_85_gripper_joint_0_L",

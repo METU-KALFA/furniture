@@ -32,4 +32,4 @@ background_names = [
 ]
 
 # list of robot agent names
-agent_names = ["Baxter", "Sawyer", "Cursor", "Panda", "Jaco", "Fetch"]
+agent_names = ["Baxter", "Sawyer", "Cursor", "Panda", "Jaco", "Fetch", "Ur5"] 

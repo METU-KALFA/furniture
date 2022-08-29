@@ -8,3 +8,4 @@ from .robotiq_three_finger_gripper import RobotiqThreeFingerGripper
 from .panda_gripper import PandaGripper
 from .jaco_gripper import JacoGripper
 from .fetch_gripper import FetchGripper
+from .robotiq_140_gripper import Robotiq140Gripper

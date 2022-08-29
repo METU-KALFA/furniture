@@ -13,6 +13,7 @@ from .furniture_panda import FurniturePandaEnv
 from .furniture_sawyer import FurnitureSawyerEnv
 from .furniture_fetch import FurnitureFetchEnv
 from .furniture_sawyer_dense import FurnitureSawyerDenseRewardEnv
+from .furniture_ur5 import FurnitureUr5Env
 
 
 # add cursor environment to Gym
@@ -66,6 +67,19 @@ register(
         "name": "FurnitureJacoEnv",
         "furniture_id": 1,
         "background": "Interior",
+        "port": 1050,
+    },
+)
+
+# add ur5 environment to Gym
+register(
+    id="IKEAUr5-v0",
+    entry_point="furniture.env.furniture_gym:FurnitureGym",
+    kwargs={
+        "id": "IKEAUr5-v0",
+        "name": "FurnitureUr5Env",
+        "furniture_id": 1,
+        "background": "Simple",
         "port": 1050,
     },
 )
